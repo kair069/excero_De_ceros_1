@@ -1,0 +1,98 @@
+# Cargar la librería necesaria
+library(MASS)
+
+# Definir el tamaño de la muestra
+n <- 1000
+
+# Definir los predictores
+x1 <- rnorm(n)
+x2 <- rnorm(n)
+
+# Generar los datos de respuesta con exceso de ceros
+y <- rnegbin(n, mu = 1, theta = 1)
+
+# Crear un dataframe con los datos
+datos <- data.frame(y, x1, x2)
+
+# Mostrar las primeras filas de los datos
+head(datos)
+
+# Graficar un histograma de los datos de respuesta
+hist(datos$y, breaks = 20, main = "Histograma de los datos de respuesta",
+     xlab = "Valor de y", ylab = "Frecuencia", col = "skyblue")
+
+
+# Ajuste de modelos
+library(pscl)
+
+# Ejemplo con un modelo ZIP
+modelo_zip <- zeroinfl(y ~ x1 + x2, data = datos, dist = "poisson")
+summary(modelo_zip)
+# Ejemplo con un modelo ZINB
+modelo_zinb <- zeroinfl(y ~ x1 + x2 | x1 + x2, data = datos, dist = "negbin")
+summary(modelo_zinb)
+# Evaluación del desempeño de los modelos
+# Ejemplo de comparación de AIC
+AIC_zip <- AIC(modelo_zip)
+AIC_zinb <- AIC(modelo_zinb)
+
+# Selección del modelo con mejor desempeño
+if (AIC_zip < AIC_zinb) {
+  modelo_seleccionado <- modelo_zip
+} else {
+  modelo_seleccionado <- modelo_zinb
+}
+
+# Finalmente, puedes usar el modelo seleccionado para hacer predicciones
+predicciones11 <- predict(modelo_zip, newdata = datos, type = "response")
+
+# Crear un histograma de las predicciones
+hist(predicciones11, main = "Distribución de Predicciones",
+     xlab = "Valor Predicho", ylab = "Frecuencia", col = "skyblue")
+
+###importante
+
+predicciones_zinb <- predict(modelo_zinb, newdata = datos, type = "response")
+# Crear un histograma de las predicciones
+
+## Extraer las probabilidades de que y sea igual a 0 (parte binomial del modelo)
+probabilidades_binomiales <- predicciones_zinb[datos$y == 0]
+
+hist(probabilidades_binomiales, main = "Distribución de Probabilidades",
+     xlab = "Probabilidad", ylab = "Frecuencia", col = "skyblue")
+
+# Filtrar las probabilidades de que y sea mayor a 0
+probabilidades_positivas <- 1 - predicciones_zinb[datos$y == 0]
+
+# Visualizar la distribución de las probabilidades de las predicciones generadas para y > 0
+hist(probabilidades_positivas, main = "Distribución de Probabilidades (y > 0)",
+     xlab = "Probabilidad", ylab = "Frecuencia", col = "skyblue")
+###importante
+
+
+
+# Crear un nuevo conjunto de datos para la predicción
+nuevos_datos <- data.frame(x1 = 0.60, x2 = 0.78)
+
+# Hacer la predicción con el modelo seleccionado
+prediccion1 <- predict(modelo_zip, newdata = nuevos_datos, type = "response")
+
+
+# Hacer la predicción con el modelo seleccionado
+prediccion2 <- predict(modelo_zinb, newdata = nuevos_datos, type = "response")
+# Imprimir la predicción
+print(prediccion1)
+print(prediccion2)
+
+prediccion3 <- predict(modelo_poisson, newdata = nuevos_datos, type = "response")
+# Imprimir la predicción
+print(prediccion3)
+
+
+
+
+# Ajuste de un modelo Poisson
+modelo_poisson <- glm(y ~ x1 + x2, data = datos, family = poisson)
+
+# Mostrar un resumen del modelo
+summary(modelo_poisson)
